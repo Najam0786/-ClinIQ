@@ -1,0 +1,54 @@
+name: CD — Auto-Tag Release on Main
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  tag-release:
+    name: Create versioned release tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate timestamp tag
+        id: tag
+        run: echo "TAG=v$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and push tag
+        run: |
+          git tag ${{ steps.tag.outputs.TAG }} \
+            -m "Auto-release ${{ steps.tag.outputs.TAG }} — ${{ github.event.head_commit.message }}"
+          git push origin ${{ steps.tag.outputs.TAG }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG }}
+          name: "ClinIQ ${{ steps.tag.outputs.TAG }}"
+          body: |
+            **Auto-release** triggered by push to `main`.
+
+            | Field | Value |
+            |---|---|
+            | Commit | `${{ github.sha }}` |
+            | Author | ${{ github.actor }} |
+            | Message | ${{ github.event.head_commit.message }} |
+
+            ---
+            **To roll back to this version**, use the
+            [Rollback workflow](../../actions/workflows/rollback.yml)
+            and enter tag `${{ steps.tag.outputs.TAG }}`.
+          generate_release_notes: true

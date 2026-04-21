@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Testing / coverage
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.xml
+
+# Large data files (keep READMEs, exclude raw CSVs if needed)
+# Uncomment the line below if your CSVs are too large for GitHub (>50 MB)
+# sample_data/**/*.csv
+
+# Validation / temp scripts
+validate_platform.py
+
+# Model artefacts
+*.pkl
+*.joblib
+*.h5
+
+# Logs
+*.log

@@ -1,0 +1,62 @@
+name: CI — ClinIQ Quality Gate
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality-gate:
+    name: Syntax + Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Syntax check — all Python files
+        run: |
+          python - <<'EOF'
+          import ast, sys, pathlib
+          errors = []
+          for f in pathlib.Path(".").rglob("*.py"):
+              parts = f.parts
+              if any(p in parts for p in [".git", "venv", "env", ".venv"]):
+                  continue
+              try:
+                  ast.parse(f.read_text(encoding="utf-8"))
+              except SyntaxError as e:
+                  errors.append(f"{f}: {e}")
+          if errors:
+              print("❌ Syntax errors found:")
+              for e in errors:
+                  print(" ", e)
+              sys.exit(1)
+          print(f"✅ All Python files passed syntax check")
+          EOF
+
+      - name: Run unit tests
+        run: pytest tests/ -v --tb=short --junitxml=test-results-${{ matrix.python-version }}.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-py${{ matrix.python-version }}
+          path: test-results-${{ matrix.python-version }}.xml

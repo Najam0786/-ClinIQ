@@ -1,0 +1,75 @@
+name: Rollback — Revert Main to Previous Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to roll back to (e.g. v20240501-143200) — find tags in Releases"
+        required: true
+        type: string
+      reason:
+        description: "Reason for rollback (logged in commit message)"
+        required: true
+        type: string
+        default: "Production issue — reverting to last stable release"
+
+permissions:
+  contents: write
+
+jobs:
+  rollback:
+    name: Roll back main → ${{ github.event.inputs.tag }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Validate tag exists
+        run: |
+          if ! git rev-parse "${{ github.event.inputs.tag }}" >/dev/null 2>&1; then
+            echo "❌ Tag '${{ github.event.inputs.tag }}' not found."
+            echo "Available tags (latest 10):"
+            git tag --sort=-creatordate | head -10
+            exit 1
+          fi
+          echo "✅ Tag found: ${{ github.event.inputs.tag }}"
+          git show ${{ github.event.inputs.tag }} --no-patch --format="Tag date: %ci  Message: %s"
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create safe revert commit to target tag
+        run: |
+          TARGET_SHA=$(git rev-parse "${{ github.event.inputs.tag }}")
+          CURRENT_SHA=$(git rev-parse HEAD)
+
+          echo "Rolling back from $CURRENT_SHA → $TARGET_SHA"
+
+          # Use git revert (safe — no force push, full audit trail)
+          git revert --no-commit ${TARGET_SHA}..HEAD
+          git commit \
+            -m "chore(rollback): revert to ${{ github.event.inputs.tag }}" \
+            -m "Reason: ${{ github.event.inputs.reason }}" \
+            -m "Rolled back by: ${{ github.actor }}" \
+            -m "From commit: ${CURRENT_SHA}" \
+            -m "To tag:      ${{ github.event.inputs.tag }} (${TARGET_SHA})"
+
+          git push origin main
+
+      - name: Rollback summary
+        run: |
+          echo "✅ Rollback complete"
+          echo "   Target tag : ${{ github.event.inputs.tag }}"
+          echo "   Reason     : ${{ github.event.inputs.reason }}"
+          echo "   Triggered by: ${{ github.actor }}"
+          echo ""
+          echo "Streamlit Community Cloud will auto-redeploy from updated main (~2 min)."
