@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cliniq-config
+  namespace: cliniq
+data:
+  MLFLOW_TRACKING_URI: "mlruns"
+  CLINIQ_MLFLOW_ENABLED: "true"
+  CLINIQ_DRIFT_DIR: "/data/drift_reports"
+  CLINIQ_RETRAIN_DIR: "/data/drift_reports"
+  POSTGRES_DB: "cliniq_db"
+  POSTGRES_USER: "cliniq_user"
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"

@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cliniq-streamlit
+  namespace: cliniq
+  labels:
+    app: cliniq-streamlit
+    version: "2.7.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cliniq-streamlit
+  template:
+    metadata:
+      labels:
+        app: cliniq-streamlit
+    spec:
+      containers:
+        - name: cliniq-streamlit
+          image: cliniq-streamlit:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8501
+          command:
+            - streamlit
+            - run
+            - app.py
+            - --server.port=8501
+            - --server.headless=true
+            - --server.enableCORS=false
+          volumeMounts:
+            - name: cliniq-data
+              mountPath: /app/models
+              subPath: models
+            - name: cliniq-data
+              mountPath: /app/mlruns
+              subPath: mlruns
+            - name: cliniq-data
+              mountPath: /app/drift_reports
+              subPath: drift_reports
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+      volumes:
+        - name: cliniq-data
+          persistentVolumeClaim:
+            claimName: cliniq-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cliniq-streamlit-service
+  namespace: cliniq
+spec:
+  selector:
+    app: cliniq-streamlit
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8501

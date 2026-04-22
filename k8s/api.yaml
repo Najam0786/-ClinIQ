@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cliniq-data-pvc
+  namespace: cliniq
+spec:
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cliniq-api
+  namespace: cliniq
+  labels:
+    app: cliniq-api
+    version: "2.7.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cliniq-api
+  template:
+    metadata:
+      labels:
+        app: cliniq-api
+    spec:
+      initContainers:
+        - name: run-migrations
+          image: cliniq-api:latest
+          command: ["alembic", "upgrade", "head"]
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
+          envFrom:
+            - configMapRef:
+                name: cliniq-config
+            - secretRef:
+                name: cliniq-secrets
+      containers:
+        - name: cliniq-api
+          image: cliniq-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          command:
+            - uvicorn
+            - api.main:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8000"
+            - --workers
+            - "2"
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
+          envFrom:
+            - configMapRef:
+                name: cliniq-config
+            - secretRef:
+                name: cliniq-secrets
+          volumeMounts:
+            - name: cliniq-data
+              mountPath: /app/models
+              subPath: models
+            - name: cliniq-data
+              mountPath: /app/mlruns
+              subPath: mlruns
+            - name: cliniq-data
+              mountPath: /app/drift_reports
+              subPath: drift_reports
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      volumes:
+        - name: cliniq-data
+          persistentVolumeClaim:
+            claimName: cliniq-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cliniq-api-service
+  namespace: cliniq
+spec:
+  selector:
+    app: cliniq-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cliniq-api-hpa
+  namespace: cliniq
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cliniq-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

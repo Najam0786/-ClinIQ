@@ -250,6 +250,9 @@ ClinIQ ships as a **full production stack** — Streamlit dashboard + REST API +
 | `POST` | `/api/v1/retrain/{disease}/from-csv` | Retrain on a fresh uploaded CSV |
 | `GET` | `/api/v1/retrain/{disease}/status` | Job status (queued / running / completed / failed) |
 | `GET` | `/api/v1/retrain/jobs` | All retrain jobs across disease models |
+| `GET` | `/api/v1/hospital/me` | Current user's hospital aggregate stats |
+| `GET` | `/api/v1/hospital/{hospital}/users` | All users in a hospital (admin only) |
+| `GET` | `/api/v1/hospital/{hospital}/stats` | Predictions & risk summary for a hospital (admin only) |
 
 Interactive docs: `http://localhost:8000/docs` (Swagger UI auto-generated)
 
@@ -511,11 +514,9 @@ ClinIQ works with any structured medical CSV or Excel file.
 - [x] Automated model retraining (FastAPI BackgroundTask — auto-triggered at drift_ratio ≥ 0.5)
 - [x] Multi-file upload (`/analyse` accepts N CSVs — auto-joined on shared key, concat fallback)
 - [x] Streamlit drift dashboard (Tab 7 — live upload, KS/Chi² bar chart, alert badges)
+- [x] Multi-tenant hospital support (hospital-scoped users, predictions, aggregate stats)
+- [x] Kubernetes deployment (`k8s/` — Namespace, ConfigMap, Deployments, Services, HPA, Ingress)
 - [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app/))
-
-### 🔜 Next Phase
-- [ ] Multi-tenant support (schema-per-hospital isolation)
-- [ ] Kubernetes deployment for hospital-scale load balancing
 
 ---
 

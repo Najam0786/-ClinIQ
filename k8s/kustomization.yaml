@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: cliniq
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - postgres.yaml
+  - api.yaml
+  - streamlit.yaml
+  - ingress.yaml
+
+# Override image tags per environment:
+#   kubectl apply -k k8s/ --set-image cliniq-api=registry/cliniq-api:v2.7.0

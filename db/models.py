@@ -84,6 +84,7 @@ class PredictionLog(Base):
     disease          = Column(String(50),  nullable=False, index=True)
     model_id         = Column(String(100), nullable=False)
     model_name       = Column(String(100), nullable=True)
+    hospital         = Column(String(255), nullable=True, index=True)
     patient_data     = Column(Text, nullable=True)   # JSON string
     risk_label       = Column(String(20),  nullable=False)
     risk_probability = Column(Float,       nullable=False)

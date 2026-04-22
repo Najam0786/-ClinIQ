@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import health, analyse, predict, models_info, fhir, auth, audit, drift, retrain
+from api.routes import health, analyse, predict, models_info, fhir, auth, audit, drift, retrain, hospital
 
 
 @asynccontextmanager
@@ -77,13 +77,14 @@ app.include_router(models_info.router,  prefix=API_PREFIX)
 app.include_router(fhir.router,         prefix=API_PREFIX)
 app.include_router(drift.router,        prefix=API_PREFIX)
 app.include_router(retrain.router,      prefix=API_PREFIX)
+app.include_router(hospital.router,     prefix=API_PREFIX)
 
 
 @app.get("/", tags=["System"])
 def root():
     return {
         "service": "ClinIQ Clinical Intelligence API",
-        "version": "2.1.0",
+        "version": "2.7.0",
         "docs":    "/docs",
         "health":  "/api/v1/health",
         "auth":    "/api/v1/auth/login",

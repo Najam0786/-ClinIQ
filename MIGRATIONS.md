@@ -84,3 +84,4 @@ alembic stamp a62d1d81b6a4   # mark as initial schema — no DDL changes run
 | Revision | Description |
 |---|---|
 | `a62d1d81b6a4` | Initial schema — `users`, `prediction_logs`, `audit_logs` |
+| `dc3cce7f6615` | Multi-tenant — index on `users.hospital`, `hospital` column + index on `prediction_logs` |

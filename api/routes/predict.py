@@ -116,6 +116,7 @@ def predict(
                 disease=disease,
                 model_id=model_id,
                 model_name=info["best_model"],
+                hospital=current_user.hospital,
                 patient_data=json.dumps(request.patient),
                 risk_label=risk_label,
                 risk_probability=round(proba, 4),
