@@ -12,6 +12,8 @@ ClinIQ is a production-ready, plug-and-play clinical ML platform built for 5 dis
 ![scikit--learn](https://img.shields.io/badge/scikit--learn-1.4+-orange)
 ![MLflow](https://img.shields.io/badge/MLflow-2.11+-0194E2?logo=mlflow&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-manifests-326CE5?logo=kubernetes&logoColor=white)
+![Alembic](https://img.shields.io/badge/Alembic-migrations-5A4FCF)
 ![FHIR](https://img.shields.io/badge/FHIR-R4-E84545)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -25,13 +27,14 @@ Like plugging in a washing machine — you put in dirty data, you get clean pred
 Just upload your CSV and click **Run**.
 
 ```
-Upload CSV → Auto-Profile → Auto-Clean → Feature Engineering
-                                       → 5-Fold CV Model Selection
-                                       → Interactive Dashboard (7 tabs)
-                                       → SHAP Explainability + PDF Export
-                                       → REST API (FastAPI) + FHIR R4
-                                       → MLflow Model Registry
-                                       → Docker one-command deploy
+Upload CSV (1–N files) → Auto-Join → Auto-Profile → Auto-Clean → Feature Engineering
+                                                               → 5-Fold CV Model Selection
+                                                               → Interactive Dashboard (8 tabs)
+                                                               → SHAP Explainability + PDF Export
+                                                               → REST API (FastAPI) + FHIR R4
+                                                               → MLflow Model Registry
+                                                               → Data Drift Detection + Auto-Retrain
+                                                               → Docker / Kubernetes deploy
 ```
 
 ---
@@ -370,7 +373,11 @@ ClinIQ/
 │   ├── profiler.py                 ← Auto-detect schema, types, quality issues
 │   ├── cleaner.py                  ← Auto-impute, dedup, fix invalid values
 │   ├── feature_engine.py           ← 20+ clinical feature engineering functions
-│   └── model_selector.py           ← 4-model CV selection + SHAP support
+│   ├── model_selector.py           ← 4-model CV selection + SHAP support
+│   ├── file_joiner.py              ← Auto-join / concat multiple uploaded CSVs
+│   ├── drift_detector.py           ← KS-test + Chi² per-feature drift engine
+│   ├── retrainer.py                ← Background retraining engine + job state
+│   └── mlflow_utils.py             ← MLflow run logging helpers
 │
 ├── modules/
 │   ├── breast_cancer.py            ← Wisconsin diagnostic pipeline
@@ -394,10 +401,15 @@ ClinIQ/
 │   ├── dependencies.py             ← Model store (save/load pipelines)
 │   └── routes/
 │       ├── health.py               ← GET /api/v1/health
-│       ├── analyse.py              ← POST /api/v1/analyse (CSV → pipeline)
+│       ├── analyse.py              ← POST /api/v1/analyse (1–N CSVs → pipeline)
 │       ├── predict.py              ← POST /api/v1/predict (single patient)
 │       ├── models_info.py          ← GET /api/v1/models
-│       └── fhir.py                 ← POST /api/v1/fhir/predict (FHIR R4)
+│       ├── fhir.py                 ← POST /api/v1/fhir/predict (FHIR R4)
+│       ├── auth.py                 ← JWT register / login / me
+│       ├── audit.py                ← Audit trail + prediction history
+│       ├── drift.py                ← Drift baseline + detect + report
+│       ├── retrain.py              ← Automated / manual model retraining
+│       └── hospital.py             ← Multi-tenant hospital-scoped endpoints
 │
 ├── db/                             ← Database layer
 │   ├── database.py                 ← SQLAlchemy engine + session (SQLite/PostgreSQL)
@@ -406,7 +418,8 @@ ClinIQ/
 ├── alembic/                        ← Database migration scripts
 │   ├── env.py                      ← Reads DATABASE_URL from env, targets db.models.Base
 │   └── versions/
-│       └── a62d1d81b6a4_*.py       ← Initial schema migration
+│       ├── a62d1d81b6a4_*.py       ← Initial schema (users, prediction_logs, audit_logs)
+│       └── dc3cce7f6615_*.py       ← Multi-tenant hospital indexes
 ├── alembic.ini                     ← Alembic config (URL overridden by env var)
 ├── MIGRATIONS.md                   ← Migration cheatsheet & revision history
 │
@@ -414,6 +427,16 @@ ClinIQ/
 │   └── {disease}/
 │       ├── baseline.parquet        ← Training data snapshot (auto-saved on /analyse)
 │       └── latest_report.json      ← Most recent drift detection result
+│
+├── k8s/                            ← Kubernetes manifests
+│   ├── namespace.yaml
+│   ├── configmap.yaml
+│   ├── secret.yaml                 ← TEMPLATE only — never commit real secrets
+│   ├── postgres.yaml               ← PostgreSQL StatefulSet + PVC + Service
+│   ├── api.yaml                    ← FastAPI Deployment + Service + HPA
+│   ├── streamlit.yaml              ← Streamlit Deployment + Service
+│   ├── ingress.yaml                ← Nginx Ingress (API + Streamlit)
+│   └── kustomization.yaml
 │
 ├── models/                         ← Saved trained pipelines (joblib)
 ├── mlruns/                         ← MLflow experiment tracking data
