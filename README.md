@@ -395,6 +395,13 @@ ClinIQ/
 │   ├── database.py                 ← SQLAlchemy engine + session (SQLite/PostgreSQL)
 │   └── models.py                   ← ORM models: User, PredictionLog, AuditLog
 │
+├── alembic/                        ← Database migration scripts
+│   ├── env.py                      ← Reads DATABASE_URL from env, targets db.models.Base
+│   └── versions/
+│       └── a62d1d81b6a4_*.py       ← Initial schema migration
+├── alembic.ini                     ← Alembic config (URL overridden by env var)
+├── MIGRATIONS.md                   ← Migration cheatsheet & revision history
+│
 ├── drift_reports/                  ← Per-disease drift baselines + reports
 │   └── {disease}/
 │       ├── baseline.parquet        ← Training data snapshot (auto-saved on /analyse)
@@ -495,12 +502,12 @@ ClinIQ works with any structured medical CSV or Excel file.
 - [x] JWT authentication (register / login / role-based access: admin / doctor / viewer)
 - [x] PostgreSQL database with full audit trail (User, PredictionLog, AuditLog tables)
 - [x] Data drift detection (KS-test + Chi² per feature — alert at 30%, critical at 50%)
+- [x] Alembic migrations (`alembic upgrade head` on every deploy — PostgreSQL schema versioning)
 - [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app/))
 
 ### 🔜 Next Phase
-- [ ] Alembic migrations for database schema versioning
-- [ ] Multi-file upload (auto-join relational tables)
-- [ ] Automated model retraining (scheduled via Prefect / Airflow)
+- [ ] Automated model retraining (trigger retrain when drift_ratio ≥ 0.5)
+- [ ] Multi-file upload (auto-join relational tables before training)
 - [ ] Multi-tenant support (schema-per-hospital isolation)
 - [ ] Kubernetes deployment for hospital-scale load balancing
 

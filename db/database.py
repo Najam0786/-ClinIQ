@@ -43,6 +43,14 @@ def get_db():
 
 
 def init_db() -> None:
-    """Create all tables if they don't exist (called on API startup)."""
-    from db import models  # noqa: F401 — ensures models are registered
-    Base.metadata.create_all(bind=engine)
+    """
+    Bootstrap the database on API startup.
+
+    - SQLite  (local dev): creates tables via create_all so no manual migration step is needed.
+    - PostgreSQL (production): tables are owned by Alembic migrations;
+      `create_all` is intentionally skipped — run `alembic upgrade head` in your
+      Docker entrypoint or CI pipeline instead.
+    """
+    from db import models  # noqa: F401 — ensures models are registered on Base
+    if DATABASE_URL.startswith("sqlite"):
+        Base.metadata.create_all(bind=engine)
