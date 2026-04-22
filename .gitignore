@@ -52,3 +52,11 @@ validate_platform.py
 
 # Logs
 *.log
+
+# Environment variables — NEVER commit secrets
+.env
+.env.*
+!.env.example
+
+# SQLite local dev database
+cliniq.db

@@ -2,21 +2,23 @@ version: "3.9"
 
 services:
 
-  # ── Streamlit Dashboard ──────────────────────────────────────────────────────
-  streamlit:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: cliniq-dashboard
-    ports:
-      - "8501:8501"
-    volumes:
-      - ./models:/app/models
-      - ./sample_data:/app/sample_data
+  # ── PostgreSQL Database ──────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: cliniq-db
     environment:
-      - CLINIQ_MLFLOW_ENABLED=false
-    depends_on:
-      - api
+      POSTGRES_USER:     ${POSTGRES_USER:-cliniq_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cliniq_secure_password}
+      POSTGRES_DB:       ${POSTGRES_DB:-cliniq_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cliniq_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     networks:
       - cliniq-net
@@ -34,9 +36,34 @@ services:
       - ./mlruns:/app/mlruns
       - ./sample_data:/app/sample_data
     environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-cliniq_user}:${POSTGRES_PASSWORD:-cliniq_secure_password}@db:5432/${POSTGRES_DB:-cliniq_db}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-cliniq-dev-secret-change-in-production}
+      - ACCESS_TOKEN_TTL_MINUTES=${ACCESS_TOKEN_TTL_MINUTES:-480}
       - CLINIQ_MLFLOW_ENABLED=true
       - MLFLOW_TRACKING_URI=mlruns
       - CLINIQ_MLFLOW_EXPERIMENT=ClinIQ-Production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cliniq-net
+
+  # ── Streamlit Dashboard ──────────────────────────────────────────────────────
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cliniq-dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models
+      - ./sample_data:/app/sample_data
+    environment:
+      - CLINIQ_MLFLOW_ENABLED=false
+    depends_on:
+      - api
     restart: unless-stopped
     networks:
       - cliniq-net
@@ -67,3 +94,4 @@ networks:
 volumes:
   models:
   mlruns:
+  postgres_data:
