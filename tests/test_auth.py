@@ -17,7 +17,9 @@ def api(url, method="GET", data=None, headers=None, form=False):
     r = urllib.request.Request(url, data=payload, headers=h, method=method)
     try:
         resp = urllib.request.urlopen(r)
-        return resp.status, json.loads(resp.read())
+        raw = resp.read()
+        body = json.loads(raw) if raw else {}
+        return resp.status, body
     except urllib.error.HTTPError as e:
         try:
             body = json.loads(e.read())
@@ -65,5 +67,54 @@ s, b = api(
 )
 print(f"BAD LOGIN [{s}]: {b.get('detail')}")
 assert s in (401, 429), f"Expected 401 or 429, got {s}"
+
+# ── 6. Password change ────────────────────────────────────────────────────────
+AUTH = {"Authorization": f"Bearer {token}"}
+s, b = api(BASE + "/auth/me/password", "POST",
+           {"current_password": "wrongpass", "new_password": "newpass999"},
+           headers=AUTH)
+print(f"PW WRONG  [{s}]: {b.get('detail')}")
+assert s == 400, f"Expected 400 for wrong current password, got {s}"
+
+s, b = api(BASE + "/auth/me/password", "POST",
+           {"current_password": "ClinIQ@2024", "new_password": "ClinIQ@2024"},
+           headers=AUTH)
+print(f"PW CHANGE [{s}]: OK (204)")
+assert s == 204, f"Expected 204 for password change, got {s}"
+
+# ── 7. Admin register + deactivate/reactivate ─────────────────────────────────
+s, b = api(
+    BASE + "/auth/register", "POST",
+    {"email": "admin@cliniq.com", "full_name": "ClinIQ Admin",
+     "password": "Admin@2024!", "role": "admin"},
+)
+print(f"ADMIN REG [{s}]: {b.get('email', b.get('detail'))}")
+assert s in (201, 409)
+
+s, b = api(BASE + "/auth/login", "POST",
+           {"username": "admin@cliniq.com", "password": "Admin@2024!"}, form=True)
+print(f"ADMIN LOGIN [{s}]: {str(b.get('access_token',''))[:30]}...")
+assert s == 200, f"Admin login failed: {b}"
+admin_token = b["access_token"]
+ADMIN = {"Authorization": f"Bearer {admin_token}"}
+
+# get the doctor user id
+s, b = api(BASE + "/auth/users", headers=ADMIN)
+assert s == 200
+doctor = next((u for u in b if u["email"] == "dr.nazmul@cliniq.com"), None)
+assert doctor, "Doctor user not found in /auth/users"
+doctor_id = doctor["id"]
+
+# deactivate
+s, b = api(BASE + f"/auth/users/{doctor_id}/active", "PUT",
+           {"is_active": False}, headers=ADMIN)
+print(f"DEACTIVATE [{s}]: active={b.get('is_active')}")
+assert s == 200 and b.get("is_active") is False
+
+# reactivate
+s, b = api(BASE + f"/auth/users/{doctor_id}/active", "PUT",
+           {"is_active": True}, headers=ADMIN)
+print(f"REACTIVATE [{s}]: active={b.get('is_active')}")
+assert s == 200 and b.get("is_active") is True
 
 print("\nALL AUTH TESTS PASSED")
