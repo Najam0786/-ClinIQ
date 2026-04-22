@@ -15,6 +15,7 @@ ClinIQ is a production-ready, plug-and-play clinical ML platform built for 5 dis
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-manifests-326CE5?logo=kubernetes&logoColor=white)
 ![Alembic](https://img.shields.io/badge/Alembic-migrations-5A4FCF)
 ![FHIR](https://img.shields.io/badge/FHIR-R4-E84545)
+![Tests](https://img.shields.io/badge/tests-159%20passed-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -548,6 +549,7 @@ ClinIQ works with any structured medical CSV or Excel file.
 - [x] Prometheus `/metrics` endpoint (request count, latency histogram, error rate)
 - [x] Password change endpoint (`POST /auth/me/password` — verifies current password)
 - [x] User deactivate / reactivate endpoint (`PUT /auth/users/{id}/active` — admin only)
+- [x] Comprehensive unit test suite — 159 tests across auth, drift, cleaner, profiler, feature_engine, model_selector, file_joiner, hospital
 - [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app()))
 
 ---
