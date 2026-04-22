@@ -60,3 +60,7 @@ validate_platform.py
 
 # SQLite local dev database
 cliniq.db
+
+# Drift baseline data (large parquet files — regenerated on /analyse)
+drift_reports/**/*.parquet
+drift_reports/**/*.json

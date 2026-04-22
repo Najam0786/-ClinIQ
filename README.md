@@ -242,6 +242,10 @@ ClinIQ ships as a **full production stack** — Streamlit dashboard + REST API +
 | `POST` | `/api/v1/fhir/predict` | FHIR R4 Patient + Observations → RiskAssessment |
 | `GET` | `/api/v1/audit` | Full audit trail (admin only) |
 | `GET` | `/api/v1/audit/me/predictions` | Current user's prediction history |
+| `POST` | `/api/v1/drift/baseline/{disease}` | Upload CSV to set drift baseline |
+| `POST` | `/api/v1/drift/detect/{disease}` | Upload new data → KS/Chi² drift report |
+| `GET` | `/api/v1/drift/report/{disease}` | Latest drift report for a disease |
+| `GET` | `/api/v1/drift/status` | All diseases with baselines + last alert |
 
 Interactive docs: `http://localhost:8000/docs` (Swagger UI auto-generated)
 
@@ -391,6 +395,11 @@ ClinIQ/
 │   ├── database.py                 ← SQLAlchemy engine + session (SQLite/PostgreSQL)
 │   └── models.py                   ← ORM models: User, PredictionLog, AuditLog
 │
+├── drift_reports/                  ← Per-disease drift baselines + reports
+│   └── {disease}/
+│       ├── baseline.parquet        ← Training data snapshot (auto-saved on /analyse)
+│       └── latest_report.json      ← Most recent drift detection result
+│
 ├── models/                         ← Saved trained pipelines (joblib)
 ├── mlruns/                         ← MLflow experiment tracking data
 ├── screenshots/                    ← Dashboard screenshots for README
@@ -485,10 +494,11 @@ ClinIQ works with any structured medical CSV or Excel file.
 - [x] FHIR R4 integration (LOINC-mapped RiskAssessment endpoint)
 - [x] JWT authentication (register / login / role-based access: admin / doctor / viewer)
 - [x] PostgreSQL database with full audit trail (User, PredictionLog, AuditLog tables)
+- [x] Data drift detection (KS-test + Chi² per feature — alert at 30%, critical at 50%)
 - [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app/))
 
 ### 🔜 Next Phase
-- [ ] Data drift detection (Evidently AI — alert when input drifts from training)
+- [ ] Alembic migrations for database schema versioning
 - [ ] Multi-file upload (auto-join relational tables)
 - [ ] Automated model retraining (scheduled via Prefect / Airflow)
 - [ ] Multi-tenant support (schema-per-hospital isolation)

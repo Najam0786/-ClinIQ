@@ -17,6 +17,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from api.schemas import AnalyseResponse, DiseaseModule
 from api.dependencies import save_model
 from core.mlflow_utils import log_training_run
+from core.drift_detector import save_baseline
 
 router = APIRouter()
 
@@ -93,6 +94,12 @@ async def analyse(
         categorical_cols=result.categorical_cols,
         mlflow_run_id=mlflow_run_id,
     )
+
+    feature_cols = result.numeric_cols + result.categorical_cols
+    try:
+        save_baseline(disease.value, df, feature_cols)
+    except Exception:
+        pass
 
     pred_df = result.predictions_df
     high_risk = int((pred_df["prediction"] == 1).sum())
