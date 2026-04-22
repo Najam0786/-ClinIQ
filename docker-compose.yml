@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+
+  # ── Streamlit Dashboard ──────────────────────────────────────────────────────
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cliniq-dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models
+      - ./sample_data:/app/sample_data
+    environment:
+      - CLINIQ_MLFLOW_ENABLED=false
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - cliniq-net
+
+  # ── FastAPI REST API ─────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: cliniq-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+      - ./sample_data:/app/sample_data
+    environment:
+      - CLINIQ_MLFLOW_ENABLED=true
+      - MLFLOW_TRACKING_URI=mlruns
+      - CLINIQ_MLFLOW_EXPERIMENT=ClinIQ-Production
+    restart: unless-stopped
+    networks:
+      - cliniq-net
+
+  # ── MLflow Tracking Server ───────────────────────────────────────────────────
+  mlflow:
+    image: python:3.11-slim
+    container_name: cliniq-mlflow
+    command: >
+      bash -c "pip install mlflow --quiet &&
+               mlflow server
+               --host 0.0.0.0
+               --port 5000
+               --backend-store-uri /mlruns
+               --default-artifact-root /mlruns"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    restart: unless-stopped
+    networks:
+      - cliniq-net
+
+networks:
+  cliniq-net:
+    driver: bridge
+
+volumes:
+  models:
+  mlruns:

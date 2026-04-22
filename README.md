@@ -189,6 +189,95 @@ Before model training, ClinIQ auto-engineers clinical features from raw columns:
 
 ---
 
+## 🏭 Production Architecture
+
+ClinIQ ships as a **full production stack** — Streamlit dashboard + REST API + MLflow + FHIR, all containerised with Docker.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     ClinIQ Production Stack                      │
+├──────────────────┬──────────────────┬───────────────────────────┤
+│  Streamlit UI    │  FastAPI REST    │  MLflow Tracking          │
+│  :8501           │  :8000           │  :5000                    │
+│  cliniq1.        │  /api/v1/        │  Experiment logs          │
+│  streamlit.app   │  analyse         │  Model registry           │
+│                  │  predict         │  Run comparison           │
+│                  │  models          │                           │
+│                  │  fhir/predict    │                           │
+└──────────────────┴──────────────────┴───────────────────────────┘
+         Shared: models/ (joblib) + mlruns/ (MLflow artifacts)
+```
+
+### REST API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/health` | API status + model count |
+| `POST` | `/api/v1/analyse` | Upload CSV → full pipeline → trained model |
+| `POST` | `/api/v1/predict` | Single-patient real-time risk prediction |
+| `GET` | `/api/v1/models` | List all trained models in registry |
+| `GET` | `/api/v1/models/{id}` | Get metadata for a specific model |
+| `POST` | `/api/v1/fhir/predict` | FHIR R4 Patient + Observations → RiskAssessment |
+
+Interactive docs: `http://localhost:8000/docs` (Swagger UI auto-generated)
+
+### One-Command Deployment (Docker)
+
+```bash
+docker-compose up --build
+```
+
+| Service | URL | Description |
+|---|---|---|
+| Streamlit Dashboard | http://localhost:8501 | Interactive clinical UI |
+| FastAPI REST API | http://localhost:8000/docs | Swagger UI + all endpoints |
+| MLflow Tracking | http://localhost:5000 | Experiment logs + model registry |
+
+### Quick API Usage
+
+```bash
+# 1. Train a model on your dataset
+curl -X POST http://localhost:8000/api/v1/analyse \
+  -F "file=@my_patients.csv" \
+  -F "disease=heart_disease"
+
+# 2. Predict risk for a single patient
+curl -X POST http://localhost:8000/api/v1/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "disease": "heart_disease",
+    "patient": {"age": 58, "bmi": 29.1, "systolic_bp": 145, "avg_cholesterol": 220}
+  }'
+
+# 3. FHIR R4 prediction (NHS/EMR integration)
+curl -X POST http://localhost:8000/api/v1/fhir/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "disease": "diabetes",
+    "patient": {"resourceType": "Patient", "id": "P001", "gender": "female"},
+    "observations": [
+      {"resourceType": "Observation",
+       "code": {"coding": [{"system": "http://loinc.org", "code": "4548-4"}]},
+       "valueQuantity": {"value": 7.2, "unit": "%"}}
+    ]
+  }'
+```
+
+### MLflow Model Registry
+
+Every training run is automatically logged:
+- ✅ Best model name + all CV AUC scores
+- ✅ Test AUC, dataset size, feature count
+- ✅ Disease tag for filtering
+- ✅ Model artifact registered in MLflow registry
+
+```bash
+# Launch MLflow UI locally
+mlflow ui --port 5000
+```
+
+---
+
 ## Dashboard Tabs
 
 | Tab | Contents |
