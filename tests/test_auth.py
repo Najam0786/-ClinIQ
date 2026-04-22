@@ -64,6 +64,6 @@ s, b = api(
     form=True,
 )
 print(f"BAD LOGIN [{s}]: {b.get('detail')}")
-assert s == 401
+assert s in (401, 429), f"Expected 401 or 429, got {s}"
 
 print("\nALL AUTH TESTS PASSED")

@@ -15,9 +15,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from db.database import get_db
@@ -28,6 +30,7 @@ from api.auth_utils import (
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+_limiter = Limiter(key_func=get_remote_address)
 
 
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
@@ -68,6 +71,11 @@ class ChangeRoleRequest(BaseModel):
     role: UserRole
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password:     str = Field(..., min_length=8)
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _user_to_response(user: User) -> UserResponse:
@@ -86,7 +94,9 @@ def _user_to_response(user: User) -> UserResponse:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@_limiter.limit("10/minute")
 def register(
+    request:    Request,
     body:       RegisterRequest,
     db:         Session = Depends(get_db),
     x_real_ip: Optional[str] = Header(None, alias="X-Real-IP"),
@@ -119,7 +129,9 @@ def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@_limiter.limit("5/minute")
 def login(
+    request:         Request,
     form:            OAuth2PasswordRequestForm = Depends(),
     db:              Session = Depends(get_db),
     x_forwarded_for: Optional[str] = Header(None, alias="X-Forwarded-For"),
@@ -175,6 +187,24 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return _user_to_response(current_user)
+
+
+@router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    body:         ChangePasswordRequest,
+    db:           Session = Depends(get_db),
+    current_user: User    = Depends(get_current_user),
+):
+    """Change current user's password. Requires the existing password."""
+    if not verify_password(body.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+    current_user.hashed_password = hash_password(body.new_password)
+    db.commit()
+    write_audit_log(
+        db, action="password_change", user_id=str(current_user.id),
+        resource_type="user", resource_id=str(current_user.id),
+        details={"email": current_user.email},
+    )
 
 
 @router.get("/users", response_model=List[UserResponse])
