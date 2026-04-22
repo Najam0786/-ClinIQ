@@ -231,11 +231,17 @@ ClinIQ ships as a **full production stack** — Streamlit dashboard + REST API +
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/v1/health` | API status + model count |
+| `POST` | `/api/v1/auth/register` | Create account (doctor / admin / viewer) |
+| `POST` | `/api/v1/auth/login` | Login → JWT Bearer token |
+| `GET` | `/api/v1/auth/me` | Current user profile |
+| `GET` | `/api/v1/auth/users` | List all users (admin only) |
 | `POST` | `/api/v1/analyse` | Upload CSV → full pipeline → trained model |
-| `POST` | `/api/v1/predict` | Single-patient real-time risk prediction |
+| `POST` | `/api/v1/predict` | Single-patient prediction (logged to DB if authenticated) |
 | `GET` | `/api/v1/models` | List all trained models in registry |
 | `GET` | `/api/v1/models/{id}` | Get metadata for a specific model |
 | `POST` | `/api/v1/fhir/predict` | FHIR R4 Patient + Observations → RiskAssessment |
+| `GET` | `/api/v1/audit` | Full audit trail (admin only) |
+| `GET` | `/api/v1/audit/me/predictions` | Current user's prediction history |
 
 Interactive docs: `http://localhost:8000/docs` (Swagger UI auto-generated)
 
@@ -381,6 +387,10 @@ ClinIQ/
 │       ├── models_info.py          ← GET /api/v1/models
 │       └── fhir.py                 ← POST /api/v1/fhir/predict (FHIR R4)
 │
+├── db/                             ← Database layer
+│   ├── database.py                 ← SQLAlchemy engine + session (SQLite/PostgreSQL)
+│   └── models.py                   ← ORM models: User, PredictionLog, AuditLog
+│
 ├── models/                         ← Saved trained pipelines (joblib)
 ├── mlruns/                         ← MLflow experiment tracking data
 ├── screenshots/                    ← Dashboard screenshots for README
@@ -470,16 +480,16 @@ ClinIQ works with any structured medical CSV or Excel file.
 - [x] Single patient real-time predictor (live risk form + gauge)
 - [x] CI/CD pipeline with GitHub Actions (quality gate + auto-tag + rollback)
 - [x] FastAPI REST layer with Swagger UI
-- [x] Docker containerisation (Streamlit + FastAPI + MLflow)
+- [x] Docker containerisation (Streamlit + FastAPI + MLflow + PostgreSQL)
 - [x] MLflow model registry (auto-log every training run)
 - [x] FHIR R4 integration (LOINC-mapped RiskAssessment endpoint)
+- [x] JWT authentication (register / login / role-based access: admin / doctor / viewer)
+- [x] PostgreSQL database with full audit trail (User, PredictionLog, AuditLog tables)
 - [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app/))
 
 ### 🔜 Next Phase
-- [ ] User authentication (JWT login + role-based access: doctor / admin)
-- [ ] Persistent patient database (PostgreSQL + audit trail)
-- [ ] Multi-file upload (auto-join relational tables)
 - [ ] Data drift detection (Evidently AI — alert when input drifts from training)
+- [ ] Multi-file upload (auto-join relational tables)
 - [ ] Automated model retraining (scheduled via Prefect / Airflow)
 - [ ] Multi-tenant support (schema-per-hospital isolation)
 - [ ] Kubernetes deployment for hospital-scale load balancing
