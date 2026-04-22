@@ -115,6 +115,6 @@ assert b["alert"], "Expected alert=True for clearly drifted data"
 # ── Get stored report ─────────────────────────────────────────────────────────
 s, b = api(BASE + "/drift/report/heart_disease", headers=AUTH)
 assert s == 200 and b["disease"] == "heart_disease"
-print(f"REPORT     [{s}]: {b['summary'][:70]}...")
+print(f"REPORT     [{s}]: {b['summary'][:70].encode('ascii','replace').decode()}...")
 
 print("\nALL DRIFT TESTS PASSED")
