@@ -241,3 +241,34 @@ def change_user_role(
         details={"old_role": old_role, "new_role": body.role.value},
     )
     return _user_to_response(target)
+
+
+class SetActiveRequest(BaseModel):
+    is_active: bool
+
+
+@router.put("/users/{user_id}/active", response_model=UserResponse)
+def set_user_active(
+    user_id:      str,
+    body:         SetActiveRequest,
+    db:           Session = Depends(get_db),
+    current_user: User    = Depends(require_role(UserRole.admin)),
+):
+    """Activate or deactivate a user account. Admin only."""
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    if str(target.id) == str(current_user.id):
+        raise HTTPException(status_code=400, detail="Cannot change your own active status.")
+
+    action = "activate" if body.is_active else "deactivate"
+    target.is_active = body.is_active
+    db.commit()
+    db.refresh(target)
+
+    write_audit_log(
+        db, action=action, user_id=str(current_user.id),
+        resource_type="user", resource_id=str(target.id),
+        details={"email": target.email, "is_active": body.is_active},
+    )
+    return _user_to_response(target)

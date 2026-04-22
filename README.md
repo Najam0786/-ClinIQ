@@ -237,7 +237,11 @@ ClinIQ ships as a **full production stack** — Streamlit dashboard + REST API +
 | `POST` | `/api/v1/auth/register` | Create account (doctor / admin / viewer) |
 | `POST` | `/api/v1/auth/login` | Login → JWT Bearer token |
 | `GET` | `/api/v1/auth/me` | Current user profile |
+| `PUT` | `/api/v1/auth/me` | Update name / hospital |
+| `POST` | `/api/v1/auth/me/password` | Change own password (requires current password) |
 | `GET` | `/api/v1/auth/users` | List all users (admin only) |
+| `PUT` | `/api/v1/auth/users/{id}/role` | Change a user's role (admin only) |
+| `PUT` | `/api/v1/auth/users/{id}/active` | Activate / deactivate a user account (admin only) |
 | `POST` | `/api/v1/analyse` | Upload 1–N CSVs → auto-join → full pipeline → trained model |
 | `POST` | `/api/v1/predict` | Single-patient prediction (logged to DB if authenticated) |
 | `GET` | `/api/v1/models` | List all trained models in registry |
@@ -540,8 +544,10 @@ ClinIQ works with any structured medical CSV or Excel file.
 - [x] Streamlit drift dashboard (Tab 7 — live upload, KS/Chi² bar chart, alert badges)
 - [x] Multi-tenant hospital support (hospital-scoped users, predictions, aggregate stats)
 - [x] Kubernetes deployment (`k8s/` — Namespace, ConfigMap, Deployments, Services, HPA, Ingress)
-- [x] Rate limiting (slowapi — 60 req/min default, `CLINIQ_RATE_LIMIT` env override)
+- [x] Rate limiting (slowapi — 60 req/min default, `CLINIQ_RATE_LIMIT` env override; 5/min on login, 10/min on register)
 - [x] Prometheus `/metrics` endpoint (request count, latency histogram, error rate)
+- [x] Password change endpoint (`POST /auth/me/password` — verifies current password)
+- [x] User deactivate / reactivate endpoint (`PUT /auth/users/{id}/active` — admin only)
 - [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app()))
 
 ---
