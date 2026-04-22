@@ -58,8 +58,8 @@ validate_platform.py
 .env.*
 !.env.example
 
-# SQLite local dev database
-cliniq.db
+# SQLite databases (dev, test, alembic scratch)
+*.db
 
 # Drift baseline data (large parquet files — regenerated on /analyse)
 drift_reports/**/*.parquet
