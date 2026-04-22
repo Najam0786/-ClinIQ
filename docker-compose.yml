@@ -35,6 +35,7 @@ services:
       - ./models:/app/models
       - ./mlruns:/app/mlruns
       - ./sample_data:/app/sample_data
+      - ./drift_reports:/app/drift_reports
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-cliniq_user}:${POSTGRES_PASSWORD:-cliniq_secure_password}@db:5432/${POSTGRES_DB:-cliniq_db}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-cliniq-dev-secret-change-in-production}
@@ -42,9 +43,17 @@ services:
       - CLINIQ_MLFLOW_ENABLED=true
       - MLFLOW_TRACKING_URI=mlruns
       - CLINIQ_MLFLOW_EXPERIMENT=ClinIQ-Production
+      - CLINIQ_DRIFT_DIR=/app/drift_reports
+      - CLINIQ_RATE_LIMIT=${CLINIQ_RATE_LIMIT:-60/minute}
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
     networks:
       - cliniq-net
@@ -59,11 +68,21 @@ services:
       - "8501:8501"
     volumes:
       - ./models:/app/models
+      - ./mlruns:/app/mlruns
       - ./sample_data:/app/sample_data
+      - ./drift_reports:/app/drift_reports
     environment:
       - CLINIQ_MLFLOW_ENABLED=false
+      - CLINIQ_DRIFT_DIR=/app/drift_reports
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8501/_stcore/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
     networks:
       - cliniq-net
