@@ -4,6 +4,8 @@
 
 ClinIQ is a production-ready, plug-and-play clinical ML platform built for 5 disease domains + a universal auto-mode. Drop in any structured medical dataset — clean or messy — and the system automatically profiles the data, fixes quality issues, engineers 20+ clinical features, selects the best model via cross-validation, and serves a full interactive dashboard with SHAP explainability and PDF export.
 
+[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-cliniq1.streamlit.app-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://cliniq1.streamlit.app/)
+
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Streamlit](https://img.shields.io/badge/streamlit-1.32+-red)
 ![scikit--learn](https://img.shields.io/badge/scikit--learn-1.4+-orange)
