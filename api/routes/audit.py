@@ -70,29 +70,32 @@ def _parse_log(log: AuditLog) -> AuditEntry:
 
 @router.get("", response_model=List[AuditEntry])
 def get_audit_log(
-    limit:        int     = Query(100, le=500),
+    limit:        int          = Query(100, ge=1, le=500),
+    skip:         int          = Query(0,   ge=0),
     action:       Optional[str] = Query(None),
     db:           Session       = Depends(get_db),
     current_user: User          = Depends(require_role(UserRole.admin)),
 ):
-    """Full audit trail — admin only. Filter by action if needed."""
+    """Full audit trail — admin only. Supports skip/limit pagination."""
     q = db.query(AuditLog).order_by(AuditLog.created_at.desc())
     if action:
         q = q.filter(AuditLog.action == action)
-    return [_parse_log(log) for log in q.limit(limit).all()]
+    return [_parse_log(log) for log in q.offset(skip).limit(limit).all()]
 
 
 @router.get("/me/predictions", response_model=List[PredictionEntry])
 def my_predictions(
-    limit:        int     = Query(50, le=200),
+    limit:        int     = Query(50, ge=1, le=200),
+    skip:         int     = Query(0,  ge=0),
     db:           Session = Depends(get_db),
     current_user: User    = Depends(get_current_user),
 ):
-    """Current user's prediction history."""
+    """Current user's prediction history. Supports skip/limit pagination."""
     logs = (
         db.query(PredictionLog)
         .filter(PredictionLog.user_id == current_user.id)
         .order_by(PredictionLog.created_at.desc())
+        .offset(skip)
         .limit(limit)
         .all()
     )
@@ -113,15 +116,17 @@ def my_predictions(
 
 @router.get("/me/actions", response_model=List[AuditEntry])
 def my_actions(
-    limit:        int     = Query(50, le=200),
+    limit:        int     = Query(50, ge=1, le=200),
+    skip:         int     = Query(0,  ge=0),
     db:           Session = Depends(get_db),
     current_user: User    = Depends(get_current_user),
 ):
-    """Current user's login + action history."""
+    """Current user's login + action history. Supports skip/limit pagination."""
     logs = (
         db.query(AuditLog)
         .filter(AuditLog.user_id == current_user.id)
         .order_by(AuditLog.created_at.desc())
+        .offset(skip)
         .limit(limit)
         .all()
     )

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -77,11 +77,20 @@ def my_hospital_stats(
 @router.get("/{hospital}/users", response_model=List[HospitalUser])
 def hospital_users(
     hospital:     str,
+    limit:        int     = Query(50,  ge=1, le=500),
+    skip:         int     = Query(0,   ge=0),
     current_user: User    = Depends(require_role(UserRole.admin)),
     db:           Session = Depends(get_db),
 ):
-    """List all users registered under a hospital (admin only)."""
-    users = db.query(User).filter(User.hospital == hospital).order_by(User.created_at).all()
+    """List users registered under a hospital (admin only). Supports skip/limit pagination."""
+    users = (
+        db.query(User)
+        .filter(User.hospital == hospital)
+        .order_by(User.created_at)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     if not users:
         raise HTTPException(
             status_code=404,
@@ -103,16 +112,18 @@ def hospital_users(
 @router.get("/{hospital}/predictions", response_model=List[HospitalPrediction])
 def hospital_predictions(
     hospital:     str,
-    limit:        int  = 100,
-    current_user: User = Depends(require_role(UserRole.admin)),
+    limit:        int     = Query(100, ge=1, le=500),
+    skip:         int     = Query(0,   ge=0),
+    current_user: User    = Depends(require_role(UserRole.admin)),
     db:           Session = Depends(get_db),
 ):
-    """List recent predictions logged under a hospital (admin only)."""
+    """List predictions logged under a hospital (admin only). Supports skip/limit pagination."""
     rows = (
         db.query(PredictionLog, User.email)
         .join(User, PredictionLog.user_id == User.id)
         .filter(PredictionLog.hospital == hospital)
         .order_by(PredictionLog.created_at.desc())
+        .offset(skip)
         .limit(limit)
         .all()
     )
