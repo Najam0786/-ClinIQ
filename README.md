@@ -6,9 +6,13 @@ ClinIQ is a production-ready, plug-and-play clinical ML platform built for 5 dis
 
 [![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-cliniq1.streamlit.app-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://cliniq1.streamlit.app/)
 
-![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![Python](https://img.shields.io/badge/python-3.11-blue)
 ![Streamlit](https://img.shields.io/badge/streamlit-1.32+-red)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)
 ![scikit--learn](https://img.shields.io/badge/scikit--learn-1.4+-orange)
+![MLflow](https://img.shields.io/badge/MLflow-2.11+-0194E2?logo=mlflow&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+![FHIR](https://img.shields.io/badge/FHIR-R4-E84545)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -23,8 +27,11 @@ Just upload your CSV and click **Run**.
 ```
 Upload CSV → Auto-Profile → Auto-Clean → Feature Engineering
                                        → 5-Fold CV Model Selection
-                                       → Interactive Dashboard (6 tabs)
+                                       → Interactive Dashboard (7 tabs)
                                        → SHAP Explainability + PDF Export
+                                       → REST API (FastAPI) + FHIR R4
+                                       → MLflow Model Registry
+                                       → Docker one-command deploy
 ```
 
 ---
@@ -48,8 +55,8 @@ Upload CSV → Auto-Profile → Auto-Clean → Feature Engineering
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/ClinIQ.git
-cd ClinIQ
+git clone https://github.com/Najam0786/-ClinIQ.git
+cd -ClinIQ
 ```
 
 ### 2. Create and activate a virtual environment
@@ -68,12 +75,23 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Launch the dashboard
+### 4a. Launch the Streamlit dashboard
 ```bash
 streamlit run app.py
 ```
+Open [http://localhost:8501](http://localhost:8501)
 
-Open [http://localhost:8501](http://localhost:8501) in your browser.
+### 4b. Launch the REST API (optional)
+```bash
+uvicorn api.main:app --reload --port 8000
+```
+Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 4c. One-command full stack (Docker)
+```bash
+docker-compose up --build
+```
+Starts: Streamlit `:8501` · FastAPI `:8000` · MLflow `:5000`
 
 ---
 
@@ -352,11 +370,30 @@ ClinIQ/
 │   ├── stroke/
 │   └── respiratory/
 │
+├── api/                            ← FastAPI REST layer
+│   ├── main.py                     ← FastAPI app + Swagger UI
+│   ├── schemas.py                  ← Pydantic request/response models
+│   ├── dependencies.py             ← Model store (save/load pipelines)
+│   └── routes/
+│       ├── health.py               ← GET /api/v1/health
+│       ├── analyse.py              ← POST /api/v1/analyse (CSV → pipeline)
+│       ├── predict.py              ← POST /api/v1/predict (single patient)
+│       ├── models_info.py          ← GET /api/v1/models
+│       └── fhir.py                 ← POST /api/v1/fhir/predict (FHIR R4)
+│
+├── models/                         ← Saved trained pipelines (joblib)
+├── mlruns/                         ← MLflow experiment tracking data
 ├── screenshots/                    ← Dashboard screenshots for README
+│
 ├── .github/workflows/
 │   ├── ci.yml                      ← Quality gate (syntax + pytest) on every push
 │   ├── cd.yml                      ← Auto-tag versioned release on main push
 │   └── rollback.yml                ← One-click rollback to any previous release
+│
+├── Dockerfile                      ← Streamlit container
+├── Dockerfile.api                  ← FastAPI container
+├── docker-compose.yml              ← Full stack: Streamlit + API + MLflow
+├── .dockerignore
 ├── requirements.txt
 ├── .gitignore
 ├── ROLLBACK.md                     ← Rollback & recovery guide
@@ -386,32 +423,66 @@ ClinIQ works with any structured medical CSV or Excel file.
 
 ## Tech Stack
 
+### Dashboard
 | Library | Role |
 |---|---|
-| `streamlit` | Interactive web dashboard |
-| `pandas` / `numpy` | Data manipulation |
-| `scikit-learn` | Preprocessing, 4 models, metrics |
-| `shap` | SHAP explainability for individual predictions |
-| `plotly` | Interactive charts (ROC, confusion matrix, SHAP) |
-| `fpdf2` | PDF report generation |
-| `openpyxl` / `xlrd` | Excel file support |
+| `streamlit` | Interactive 7-tab clinical dashboard |
+| `plotly` | Interactive charts (ROC, confusion matrix, SHAP waterfall) |
+| `fpdf2` | One-click PDF clinical report export |
+
+### Machine Learning
+| Library | Role |
+|---|---|
+| `scikit-learn` | Preprocessing pipeline, 4 candidate models, all metrics |
+| `shap` | SHAP explainability — global summary + per-patient waterfall |
+| `pandas` / `numpy` | Data manipulation and feature engineering |
 | `scipy` | Statistical utilities |
+| `joblib` | Model serialisation for REST API |
+
+### Production API & Infrastructure
+| Library | Role |
+|---|---|
+| `fastapi` | REST API with auto-generated Swagger UI |
+| `uvicorn` | ASGI server for FastAPI |
+| `pydantic` | Request/response validation and schemas |
+| `mlflow` | Experiment tracking + model registry |
+| `fhir.resources` | FHIR R4 data models for NHS/EMR integration |
+| `openpyxl` / `xlrd` | Excel file support |
+
+### DevOps
+| Tool | Role |
+|---|---|
+| Docker + Docker Compose | Full-stack containerisation |
+| GitHub Actions | CI quality gate + CD auto-tagging + rollback |
+| Streamlit Community Cloud | Live deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app/)) |
 
 ---
 
 ## Roadmap
 
-- [x] 5-disease specialist modules
-- [x] Universal auto-mode for any CSV
+### ✅ Completed
+- [x] 5-disease specialist modules (Breast Cancer, Heart, Diabetes, Stroke, Respiratory)
+- [x] Universal auto-mode for any binary CSV
 - [x] Auto target detection with confidence scoring
 - [x] Adaptive model complexity for large datasets
-- [x] SHAP explainability plots (global summary + per-patient waterfall)
+- [x] SHAP explainability (global summary + per-patient waterfall)
 - [x] PDF report export (one-click downloadable clinical report)
 - [x] Single patient real-time predictor (live risk form + gauge)
-- [x] CI/CD pipeline with GitHub Actions + auto-rollback
+- [x] CI/CD pipeline with GitHub Actions (quality gate + auto-tag + rollback)
+- [x] FastAPI REST layer with Swagger UI
+- [x] Docker containerisation (Streamlit + FastAPI + MLflow)
+- [x] MLflow model registry (auto-log every training run)
+- [x] FHIR R4 integration (LOINC-mapped RiskAssessment endpoint)
+- [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app/))
+
+### 🔜 Next Phase
+- [ ] User authentication (JWT login + role-based access: doctor / admin)
+- [ ] Persistent patient database (PostgreSQL + audit trail)
 - [ ] Multi-file upload (auto-join relational tables)
-- [ ] REST API wrapper (FastAPI) for EMR integration
-- [ ] Docker containerisation
+- [ ] Data drift detection (Evidently AI — alert when input drifts from training)
+- [ ] Automated model retraining (scheduled via Prefect / Airflow)
+- [ ] Multi-tenant support (schema-per-hospital isolation)
+- [ ] Kubernetes deployment for hospital-scale load balancing
 
 ---
 
