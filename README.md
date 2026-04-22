@@ -321,6 +321,7 @@ mlflow ui --port 5000
 | 🎯 **Predictions** | Per-patient risk scores with colour-coding, downloadable CSV |
 | 🔍 **Feature Insights** | Top-5 driver cards, top-20 importance chart, SHAP explainability, clinical interpretation guide |
 | 🩺 **Patient Predictor** | Real-time single-patient risk form → probability gauge + clinical recommendation |
+| 📡 **Data Drift** | Drift status table, per-feature KS/Chi² bar chart, live CSV upload check |
 
 ---
 
@@ -509,6 +510,7 @@ ClinIQ works with any structured medical CSV or Excel file.
 - [x] Alembic migrations (`alembic upgrade head` on every deploy — PostgreSQL schema versioning)
 - [x] Automated model retraining (FastAPI BackgroundTask — auto-triggered at drift_ratio ≥ 0.5)
 - [x] Multi-file upload (`/analyse` accepts N CSVs — auto-joined on shared key, concat fallback)
+- [x] Streamlit drift dashboard (Tab 7 — live upload, KS/Chi² bar chart, alert badges)
 - [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app/))
 
 ### 🔜 Next Phase

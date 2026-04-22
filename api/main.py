@@ -49,7 +49,7 @@ app = FastAPI(
         "| `doctor` | Analyse, predict, view own history |\n"
         "| `viewer` | Predict only, view own history |"
     ),
-    version="2.1.0",
+    version="2.5.0",
     contact={
         "name":  "Nazmul Farooquee",
         "url":   "https://www.linkedin.com/in/nazmul-farooquee-mba-0b433b1b/",

@@ -647,7 +647,7 @@ n_low    = _n_low
 avg_prob = _avg_prob
 imp_df   = _imp_df
 
-tab0, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab0, tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📋 Overview",
     "📊 Data Profile",
     "🧹 Auto-Clean Report",
@@ -655,6 +655,7 @@ tab0, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🎯 Predictions",
     "🔍 Feature Insights",
     "🩺 Patient Predictor",
+    "📡 Data Drift",
 ])
 
 
@@ -1711,3 +1712,200 @@ with tab6:
 
             except Exception as _err:
                 st.error(f"❌ Prediction failed: {_err}")
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# TAB 7 — Data Drift Monitor
+# ════════════════════════════════════════════════════════════════════════════
+with tab7:
+    import json as _json
+    import io   as _io
+    from pathlib import Path as _Path
+
+    st.markdown('<div class="sec-head">📡 Data Drift Monitor</div>',
+                unsafe_allow_html=True)
+    st.markdown(
+        "Track whether incoming patient data has shifted from the training distribution. "
+        "Upload a CSV of recent data below to run a live drift check against the stored baseline.",
+        unsafe_allow_html=False,
+    )
+
+    _DRIFT_DIR = _Path("drift_reports")
+
+    def _load_reports():
+        reports = []
+        if not _DRIFT_DIR.exists():
+            return reports
+        for d in sorted(_DRIFT_DIR.iterdir()):
+            rpt_path = d / "latest_report.json"
+            base_path = d / "baseline.parquet"
+            if rpt_path.exists():
+                with open(rpt_path, encoding="utf-8") as _f:
+                    reports.append(_json.load(_f))
+            elif base_path.exists():
+                reports.append({"disease": d.name, "baseline_only": True})
+        return reports
+
+    _reports = _load_reports()
+
+    if not _reports:
+        st.info("No drift reports found. Train a model via the **Analyse** tab — "
+                "the training data is automatically saved as the baseline.")
+    else:
+        # ── Summary table ─────────────────────────────────────────────────────
+        st.markdown("#### Drift Status by Disease Model")
+
+        _summary_rows = []
+        for _r in _reports:
+            if _r.get("baseline_only"):
+                _summary_rows.append({
+                    "Disease":       _r["disease"].replace("_", " ").title(),
+                    "Last Check":    "—",
+                    "Drift Ratio":   "—",
+                    "Features Drifted": "—",
+                    "Status":        "⬜ Baseline only",
+                })
+            else:
+                _ratio = _r.get("drift_ratio", 0)
+                if _r.get("dataset_drift"):
+                    _badge = "🚨 CRITICAL"
+                elif _r.get("alert"):
+                    _badge = "⚠️ WARNING"
+                else:
+                    _badge = "✅ OK"
+                _summary_rows.append({
+                    "Disease":       _r["disease"].replace("_", " ").title(),
+                    "Last Check":    _r.get("generated_at", "—")[:19].replace("T", " "),
+                    "Drift Ratio":   f"{_ratio:.1%}",
+                    "Features Drifted": f"{_r.get('columns_drifted',0)} / {_r.get('columns_checked',0)}",
+                    "Status":        _badge,
+                })
+
+        import pandas as _pd_drift
+        st.dataframe(
+            _pd_drift.DataFrame(_summary_rows),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        # ── Per-disease detail ────────────────────────────────────────────────
+        _full_reports = [_r for _r in _reports if not _r.get("baseline_only")]
+        if _full_reports:
+            _sel_disease = st.selectbox(
+                "View per-feature detail for:",
+                [_r["disease"] for _r in _full_reports],
+                format_func=lambda x: x.replace("_", " ").title(),
+                key="_drift_sel",
+            )
+            _sel = next(_r for _r in _full_reports if _r["disease"] == _sel_disease)
+
+            _ratio = _sel.get("drift_ratio", 0)
+            _c1, _c2, _c3, _c4 = st.columns(4)
+            _c1.metric("Drift Ratio",      f"{_ratio:.1%}")
+            _c2.metric("Features Drifted", f"{_sel.get('columns_drifted',0)} / {_sel.get('columns_checked',0)}")
+            _c3.metric("Reference Rows",   f"{_sel.get('reference_rows',0):,}")
+            _c4.metric("Current Rows",     f"{_sel.get('current_rows',0):,}")
+
+            _alert_color = ("#FF4444" if _sel.get("dataset_drift")
+                            else "#FFC107" if _sel.get("alert") else "#00C875")
+            st.markdown(
+                f'<div style="background:#0E1117;border-left:5px solid {_alert_color};'
+                f'padding:12px 18px;border-radius:0 8px 8px 0;margin-bottom:16px;">'
+                f'<span style="color:{_alert_color}">{_sel.get("summary","")}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+            # Per-feature bar chart
+            _col_reports = _sel.get("column_reports", [])
+            if _col_reports:
+                import plotly.graph_objects as _go_d
+                _feat_names  = [c["column"] for c in _col_reports]
+                _feat_scores = [c.get("drift_score", 0) for c in _col_reports]
+                _feat_drift  = [c.get("drift_detected", False) for c in _col_reports]
+                _bar_colors  = ["#FF4444" if d else "#00C875" for d in _feat_drift]
+
+                _fig_drift = _go_d.Figure(_go_d.Bar(
+                    x=_feat_scores,
+                    y=_feat_names,
+                    orientation="h",
+                    marker_color=_bar_colors,
+                    text=[f"{s:.3f}" for s in _feat_scores],
+                    textposition="outside",
+                ))
+                _fig_drift.update_layout(
+                    title="Per-Feature Drift Score (KS statistic / PSI)",
+                    xaxis_title="Drift Score (higher = more drift)",
+                    yaxis_title="",
+                    height=max(300, len(_feat_names) * 36 + 80),
+                    plot_bgcolor="#0E1117",
+                    paper_bgcolor="#0E1117",
+                    font_color="#FAFAFA",
+                    margin=dict(l=10, r=80, t=50, b=40),
+                )
+                _fig_drift.add_vline(x=0.1, line_dash="dash",
+                                     line_color="#FFC107", opacity=0.5,
+                                     annotation_text="Warning threshold",
+                                     annotation_font_color="#FFC107")
+                st.plotly_chart(_fig_drift, use_container_width=True)
+
+                _drifted = [c["column"] for c in _col_reports if c.get("drift_detected")]
+                if _drifted:
+                    st.markdown(f"**Drifted features:** {', '.join(_drifted)}")
+
+            if _sel.get("auto_retrain_triggered"):
+                st.success("♻️ An automated retrain was triggered for this model when drift was detected.")
+
+    # ── Live drift check ──────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Run a Live Drift Check")
+
+    _disease_opts = [d.name for d in _DRIFT_DIR.iterdir()
+                     if d.is_dir() and (d / "baseline.parquet").exists()] \
+                    if _DRIFT_DIR.exists() else []
+
+    if not _disease_opts:
+        st.info("Train a model first to create a baseline, then upload new data here.")
+    else:
+        _d_col, _u_col = st.columns([1, 3])
+        with _d_col:
+            _live_disease = st.selectbox(
+                "Disease model", _disease_opts,
+                format_func=lambda x: x.replace("_", " ").title(),
+                key="_live_drift_disease",
+            )
+        with _u_col:
+            _live_file = st.file_uploader(
+                "Upload recent patient data (CSV)",
+                type=["csv"],
+                key="_live_drift_file",
+            )
+
+        if _live_file is not None:
+            try:
+                import pandas as _pd_live
+                from core.drift_detector import compute_drift as _compute_drift
+
+                _live_df = _pd_live.read_csv(_io.BytesIO(_live_file.read()))
+                with st.spinner("Running drift detection…"):
+                    _live_report = _compute_drift(_live_disease, _live_df)
+
+                _lr = _live_report
+                _ra = _lr.get("drift_ratio", 0)
+                _ac1, _ac2, _ac3 = st.columns(3)
+                _ac1.metric("Drift Ratio",  f"{_ra:.1%}")
+                _ac2.metric("Alert",        "Yes 🚨" if _lr.get("alert") else "No ✅")
+                _ac3.metric("Dataset Drift","Yes 🚨" if _lr.get("dataset_drift") else "No ✅")
+
+                _ac = ("#FF4444" if _lr.get("dataset_drift")
+                       else "#FFC107" if _lr.get("alert") else "#00C875")
+                st.markdown(
+                    f'<div style="background:#0E1117;border-left:5px solid {_ac};'
+                    f'padding:12px 18px;border-radius:0 8px 8px 0">'
+                    f'<span style="color:{_ac}">{_lr.get("summary","")}</span></div>',
+                    unsafe_allow_html=True,
+                )
+                if _lr.get("drifted_features"):
+                    st.markdown(f"**Drifted features:** {', '.join(_lr['drifted_features'])}")
+
+            except Exception as _de:
+                st.error(f"Drift detection failed: {_de}")
