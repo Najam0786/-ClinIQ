@@ -15,7 +15,7 @@ ClinIQ is a production-ready, plug-and-play clinical ML platform built for 5 dis
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-manifests-326CE5?logo=kubernetes&logoColor=white)
 ![Alembic](https://img.shields.io/badge/Alembic-migrations-5A4FCF)
 ![FHIR](https://img.shields.io/badge/FHIR-R4-E84545)
-![Tests](https://img.shields.io/badge/tests-159%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-171%20passed-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
