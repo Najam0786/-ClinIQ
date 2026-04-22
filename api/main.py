@@ -11,12 +11,23 @@ Interactive docs:
     http://localhost:8000/redoc  (ReDoc)
 """
 
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from api.routes import health, analyse, predict, models_info, fhir, auth, audit, drift, retrain, hospital
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[os.environ.get("CLINIQ_RATE_LIMIT", "60/minute")],
+)
 
 
 @asynccontextmanager
@@ -49,7 +60,7 @@ app = FastAPI(
         "| `doctor` | Analyse, predict, view own history |\n"
         "| `viewer` | Predict only, view own history |"
     ),
-    version="2.5.0",
+    version="2.8.0",
     contact={
         "name":  "Nazmul Farooquee",
         "url":   "https://www.linkedin.com/in/nazmul-farooquee-mba-0b433b1b/",
@@ -57,6 +68,11 @@ app = FastAPI(
     license_info={"name": "MIT"},
     lifespan=lifespan,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", tags=["Observability"])
 
 app.add_middleware(
     CORSMiddleware,

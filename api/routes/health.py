@@ -6,7 +6,7 @@ from api.dependencies import list_all_models
 
 router = APIRouter()
 
-API_VERSION = "2.1.0"
+API_VERSION = "2.8.0"
 
 
 @router.get("/health", response_model=HealthResponse, tags=["System"])

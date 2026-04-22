@@ -34,6 +34,10 @@ pyarrow>=14.0.0
 # Database migrations
 alembic>=1.13.0
 
+# Observability
+prometheus-fastapi-instrumentator>=6.1.0
+slowapi>=0.1.9
+
 # Authentication & database
 python-jose[cryptography]>=3.3.0
 bcrypt>=4.0.0

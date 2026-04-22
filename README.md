@@ -256,6 +256,7 @@ ClinIQ ships as a **full production stack** — Streamlit dashboard + REST API +
 | `GET` | `/api/v1/hospital/me` | Current user's hospital aggregate stats |
 | `GET` | `/api/v1/hospital/{hospital}/users` | All users in a hospital (admin only) |
 | `GET` | `/api/v1/hospital/{hospital}/stats` | Predictions & risk summary for a hospital (admin only) |
+| `GET` | `/metrics` | Prometheus metrics (request count, latency, error rate) |
 
 Interactive docs: `http://localhost:8000/docs` (Swagger UI auto-generated)
 
@@ -539,7 +540,9 @@ ClinIQ works with any structured medical CSV or Excel file.
 - [x] Streamlit drift dashboard (Tab 7 — live upload, KS/Chi² bar chart, alert badges)
 - [x] Multi-tenant hospital support (hospital-scoped users, predictions, aggregate stats)
 - [x] Kubernetes deployment (`k8s/` — Namespace, ConfigMap, Deployments, Services, HPA, Ingress)
-- [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app/))
+- [x] Rate limiting (slowapi — 60 req/min default, `CLINIQ_RATE_LIMIT` env override)
+- [x] Prometheus `/metrics` endpoint (request count, latency histogram, error rate)
+- [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app()))
 
 ---
 
