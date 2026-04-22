@@ -235,7 +235,7 @@ ClinIQ ships as a **full production stack** — Streamlit dashboard + REST API +
 | `POST` | `/api/v1/auth/login` | Login → JWT Bearer token |
 | `GET` | `/api/v1/auth/me` | Current user profile |
 | `GET` | `/api/v1/auth/users` | List all users (admin only) |
-| `POST` | `/api/v1/analyse` | Upload CSV → full pipeline → trained model |
+| `POST` | `/api/v1/analyse` | Upload 1–N CSVs → auto-join → full pipeline → trained model |
 | `POST` | `/api/v1/predict` | Single-patient prediction (logged to DB if authenticated) |
 | `GET` | `/api/v1/models` | List all trained models in registry |
 | `GET` | `/api/v1/models/{id}` | Get metadata for a specific model |
@@ -508,10 +508,10 @@ ClinIQ works with any structured medical CSV or Excel file.
 - [x] Data drift detection (KS-test + Chi² per feature — alert at 30%, critical at 50%)
 - [x] Alembic migrations (`alembic upgrade head` on every deploy — PostgreSQL schema versioning)
 - [x] Automated model retraining (FastAPI BackgroundTask — auto-triggered at drift_ratio ≥ 0.5)
+- [x] Multi-file upload (`/analyse` accepts N CSVs — auto-joined on shared key, concat fallback)
 - [x] Streamlit Community Cloud deployment ([cliniq1.streamlit.app](https://cliniq1.streamlit.app/))
 
 ### 🔜 Next Phase
-- [ ] Multi-file upload (auto-join relational tables before training)
 - [ ] Multi-tenant support (schema-per-hospital isolation)
 - [ ] Kubernetes deployment for hospital-scale load balancing
 

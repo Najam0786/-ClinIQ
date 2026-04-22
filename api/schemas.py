@@ -46,6 +46,9 @@ class AnalyseResponse(BaseModel):
     low_risk_count:    int
     model_id:          str
     mlflow_run_id:     Optional[str] = None
+    files_joined:      Optional[int]  = None
+    join_key:          Optional[str]  = None
+    join_strategy:     Optional[str]  = None
 
 
 # ── Single-patient prediction ─────────────────────────────────────────────────

@@ -9,7 +9,7 @@ ML pipeline, saves the model to the registry, logs to MLflow.
 from __future__ import annotations
 import io
 import traceback
-from typing import Optional
+from typing import List, Optional
 
 import pandas as pd
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -18,6 +18,7 @@ from api.schemas import AnalyseResponse, DiseaseModule
 from api.dependencies import save_model
 from core.mlflow_utils import log_training_run
 from core.drift_detector import save_baseline
+from core.file_joiner import join_files
 
 router = APIRouter()
 
@@ -50,22 +51,35 @@ def _load_df(file: UploadFile) -> pd.DataFrame:
 
 @router.post("/analyse", response_model=AnalyseResponse, tags=["Analysis"])
 async def analyse(
-    file:       UploadFile = File(..., description="CSV or Excel dataset"),
-    disease:    DiseaseModule = Form(..., description="Disease module to use"),
-    target_col: Optional[str] = Form(None, description="Target column name (auto-detected if omitted)"),
+    files:      List[UploadFile] = File(..., description="One or more CSV/Excel datasets (auto-joined if multiple)"),
+    disease:    DiseaseModule    = Form(..., description="Disease module to use"),
+    target_col: Optional[str]    = Form(None, description="Target column name (auto-detected if omitted)"),
+    join_key:   Optional[str]    = Form(None, description="Column to join on when uploading multiple files (auto-detected if omitted)"),
 ):
     """
-    Run the full ClinIQ pipeline on an uploaded dataset.
+    Run the full ClinIQ pipeline on one or more uploaded datasets.
+    - **Single file**: standard behaviour.
+    - **Multiple files**: auto-joined on a common key column (e.g. `patient_id`).
+      If no key is found, files are concatenated vertically.
     Returns model metrics, feature importances, and a model_id for future predictions.
     """
     import importlib
 
-    df = _load_df(file)
+    named_frames = []
+    for f in files:
+        try:
+            named_frames.append((f.filename or f"file_{len(named_frames)}", _load_df(f)))
+        except HTTPException as exc:
+            raise HTTPException(status_code=exc.status_code,
+                                detail=f"{f.filename}: {exc.detail}")
+
+    join_result = join_files(named_frames, explicit_key=join_key or None)
+    df = join_result.merged
 
     if df.empty or len(df) < 50:
         raise HTTPException(
             status_code=422,
-            detail=f"Dataset too small ({len(df)} rows). Minimum 50 rows required.",
+            detail=f"Dataset too small ({len(df)} rows after joining). Minimum 50 rows required.",
         )
 
     try:
@@ -122,4 +136,7 @@ async def analyse(
         low_risk_count=low_risk,
         model_id=model_id,
         mlflow_run_id=mlflow_run_id,
+        files_joined=len(join_result.files),
+        join_key=join_result.join_key,
+        join_strategy=join_result.strategy,
     )
