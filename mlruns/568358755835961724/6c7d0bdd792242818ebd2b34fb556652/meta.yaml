@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/nazmu/OneDrive/Desktop/ClinIQ/mlruns/568358755835961724/6c7d0bdd792242818ebd2b34fb556652/artifacts
+end_time: 1776849563318
+entry_point_name: ''
+experiment_id: '568358755835961724'
+lifecycle_stage: active
+run_id: 6c7d0bdd792242818ebd2b34fb556652
+run_name: diabetes__Hist Gradient Boosting
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1776849563157
+status: 3
+tags: []
+user_id: nazmu

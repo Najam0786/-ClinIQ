@@ -1,0 +1,44 @@
+{
+  "diabetes_20260422_091813": {
+    "model_id": "diabetes_20260422_091813",
+    "disease": "diabetes",
+    "best_model": "Hist Gradient Boosting",
+    "test_auc": 0.4386,
+    "trained_at": "2026-04-22T09:18:13.885280+00:00",
+    "n_features": 8,
+    "numeric_cols": [
+      "age",
+      "bmi",
+      "bp",
+      "db_obese",
+      "db_severely_obese",
+      "metabolic_risk_score"
+    ],
+    "categorical_cols": [
+      "age_group",
+      "bmi_category"
+    ],
+    "mlflow_run_id": "5f541d9fe43847c7bb8fd226a0745699"
+  },
+  "diabetes_20260422_091923": {
+    "model_id": "diabetes_20260422_091923",
+    "disease": "diabetes",
+    "best_model": "Hist Gradient Boosting",
+    "test_auc": 0.4386,
+    "trained_at": "2026-04-22T09:19:23.372835+00:00",
+    "n_features": 8,
+    "numeric_cols": [
+      "age",
+      "bmi",
+      "bp",
+      "db_obese",
+      "db_severely_obese",
+      "metabolic_risk_score"
+    ],
+    "categorical_cols": [
+      "age_group",
+      "bmi_category"
+    ],
+    "mlflow_run_id": "6c7d0bdd792242818ebd2b34fb556652"
+  }
+}

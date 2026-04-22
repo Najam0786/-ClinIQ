@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import health, analyse, predict, models_info, fhir, auth, audit, drift
+from api.routes import health, analyse, predict, models_info, fhir, auth, audit, drift, retrain
 
 
 @asynccontextmanager
@@ -76,6 +76,7 @@ app.include_router(predict.router,      prefix=API_PREFIX)
 app.include_router(models_info.router,  prefix=API_PREFIX)
 app.include_router(fhir.router,         prefix=API_PREFIX)
 app.include_router(drift.router,        prefix=API_PREFIX)
+app.include_router(retrain.router,      prefix=API_PREFIX)
 
 
 @app.get("/", tags=["System"])

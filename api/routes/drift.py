@@ -12,7 +12,7 @@ import io
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from core.drift_detector import (
@@ -22,6 +22,7 @@ from core.drift_detector import (
     load_latest_report,
     save_baseline,
 )
+from core.retrainer import maybe_trigger_retrain
 from db.models import User, UserRole
 from api.auth_utils import get_current_user, require_role
 
@@ -43,18 +44,19 @@ class ColumnDriftResult(BaseModel):
 
 
 class DriftReport(BaseModel):
-    disease:          str
-    generated_at:     str
-    reference_rows:   int
-    current_rows:     int
-    columns_checked:  int
-    columns_drifted:  int
-    drift_ratio:      float
-    dataset_drift:    bool
-    alert:            bool
-    drifted_features: List[str]
-    summary:          str
-    column_reports:   List[Dict[str, Any]]
+    disease:                str
+    generated_at:           str
+    reference_rows:         int
+    current_rows:           int
+    columns_checked:        int
+    columns_drifted:        int
+    drift_ratio:            float
+    dataset_drift:          bool
+    alert:                  bool
+    drifted_features:       List[str]
+    summary:                str
+    column_reports:         List[Dict[str, Any]]
+    auto_retrain_triggered: Optional[bool] = None
 
 
 class BaselineStatus(BaseModel):
@@ -119,9 +121,10 @@ def upload_baseline(
 
 @router.post("/detect/{disease}", response_model=DriftReport)
 def detect_drift(
-    disease:      str,
-    file:         UploadFile = File(..., description="New data CSV to compare against the baseline"),
-    current_user: User       = Depends(get_current_user),
+    disease:          str,
+    background_tasks: BackgroundTasks,
+    file:             UploadFile = File(..., description="New data CSV to compare against the baseline"),
+    current_user:     User       = Depends(get_current_user),
 ):
     """
     Upload a CSV with recent/incoming data and compare it against the stored
@@ -156,5 +159,15 @@ def detect_drift(
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Drift computation failed: {exc}")
+
+    if report.get("dataset_drift"):
+        auto_triggered = maybe_trigger_retrain(
+            disease=disease,
+            drift_ratio=report["drift_ratio"],
+            background_tasks=background_tasks,
+        )
+        report["auto_retrain_triggered"] = auto_triggered
+    else:
+        report["auto_retrain_triggered"] = False
 
     return report
