@@ -65,20 +65,58 @@ def parse_clf_report(report_str: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 def smart_read(source) -> pd.DataFrame:
-    """Read CSV or XLS/XLSX (including CSVs saved with .xls extension)."""
+    """Read CSV or XLS/XLSX — with encoding fallback, delimiter sniffing, and graceful errors."""
     name = getattr(source, "name", str(source)).lower()
-    df = None
+    source.seek(0)
+
+    # ── Excel paths ──────────────────────────────────────────────────────────
     if name.endswith(".xlsx"):
         df = pd.read_excel(source, engine="openpyxl")
-    elif name.endswith(".xls"):
+        df.columns = df.columns.str.strip()
+        return df
+    if name.endswith(".xls"):
         try:
             df = pd.read_excel(source, engine="xlrd")
         except Exception:
+            source.seek(0)
             df = pd.read_csv(source)
-    else:
-        df = pd.read_csv(source)
-    df.columns = df.columns.str.strip()
-    return df
+        df.columns = df.columns.str.strip()
+        return df
+
+    # ── CSV paths with progressive fallback ──────────────────────────────────
+    # 1) Try default UTF-8
+    for read_func in (pd.read_csv,):
+        for encoding in ("utf-8", "utf-8-sig", "latin1", "cp1252"):
+            for sep in (None, ",", ";", "\t", "|"):
+                try:
+                    source.seek(0)
+                    kwargs = {"encoding": encoding}
+                    if sep is not None:
+                        kwargs["sep"] = sep
+                    else:
+                        kwargs["sep"] = None  # let read_csv infer / use csv.Sniffer
+                        kwargs["engine"] = "python"
+                    df = read_func(source, **kwargs)
+                    df.columns = df.columns.str.strip()
+                    return df
+                except Exception:
+                    continue
+
+    # 2) Final fallback — try Excel regardless of extension (misnamed files)
+    try:
+        source.seek(0)
+        df = pd.read_excel(source, engine="openpyxl")
+        df.columns = df.columns.str.strip()
+        return df
+    except Exception:
+        pass
+
+    st.error(
+        "Could not parse the uploaded file. "
+        "Please ensure it is a valid CSV, TSV, or Excel (.xlsx / .xls) file. "
+        "Common fixes: save as CSV with UTF-8 encoding, check for special characters in headers, or remove empty rows at the top."
+    )
+    raise pd.errors.ParserError(f"Unable to parse file '{name}'. Tried CSV (utf-8/latin1/cp1252), TSV, semicolon, pipe, and Excel fallbacks.")
 
 
 def _ascii(text: str) -> str:
